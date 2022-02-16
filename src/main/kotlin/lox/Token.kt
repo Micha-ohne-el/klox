@@ -1,3 +1,5 @@
+package lox
+
 data class Token(
     private val type: TokenType,
     private val lexeme: String,

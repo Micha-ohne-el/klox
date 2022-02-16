@@ -1,4 +1,6 @@
-import TokenType.*
+package lox
+
+import lox.TokenType.*
 
 class Scanner(
     private val source: String
