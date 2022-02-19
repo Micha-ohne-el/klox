@@ -20,6 +20,14 @@ fun error(line: Int, message: String) {
     report(line, "", message)
 }
 
+fun error(token: Token, message: String) {
+    if (token.type == TokenType.EndOfFile) {
+        report(token.line, " at end", message)
+    } else {
+        report(token.line, " at '${token.lexeme}'", message)
+    }
+}
+
 
 private fun runFile(path: String) {
     val content = File(path).readText()
@@ -47,9 +55,15 @@ private fun runPrompt() {
 private fun run(source: String) {
     val scanner = Scanner(source)
     val tokens = scanner.scanTokens()
+    val parser = Parser(tokens)
+    val expression = parser.parse()
 
-    for (token in tokens) {
-        println(token)
+    if (hadError) {return}
+
+    if (expression == null) {
+        println("Could not parse expression.")
+    } else {
+        println(AstPrinter().print(expression))
     }
 }
 
