@@ -28,6 +28,11 @@ fun error(token: Token, message: String) {
     }
 }
 
+fun error(error: RuntimeError) {
+    System.err.println("[line ${error.token.line}] Runtime Error: ${error.message}")
+    hadRuntimeError = true
+}
+
 
 private fun runFile(path: String) {
     val content = File(path).readText()
@@ -35,6 +40,9 @@ private fun runFile(path: String) {
 
     if (hadError) {
         exitProcess(65)
+    }
+    if (hadRuntimeError) {
+        exitProcess(70)
     }
 }
 
@@ -61,9 +69,9 @@ private fun run(source: String) {
     if (hadError) {return}
 
     if (expression == null) {
-        println("Could not parse expression.")
+        System.err.println("Could not parse expression.")
     } else {
-        println(AstPrinter().print(expression))
+        interpreter.interpret(expression)
     }
 }
 
@@ -73,3 +81,6 @@ private fun report(line: Int, location: String, message: String) {
 }
 
 private var hadError = false
+private var hadRuntimeError = false
+
+private val interpreter = Interpreter()
