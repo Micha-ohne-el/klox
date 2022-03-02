@@ -1,6 +1,8 @@
 package lox
 
 abstract class Expression {
+    abstract fun <R> accept(visitor: Visitor<R>): R
+
     open class Literal(
         val value: Any?
     ) : Expression() {
@@ -34,6 +36,4 @@ abstract class Expression {
         fun visit(binaryExpression: Binary): R
         fun visit(groupingExpression: Grouping): R
     }
-
-    abstract fun <R> accept(visitor: Visitor<R>): R
 }

@@ -21,6 +21,7 @@ class AstPrinter : Expression.Visitor<String> {
         return parenthesize("group", groupingExpression.expression)
     }
 
+
     private fun parenthesize(name: String, vararg expressions: Expression): String {
         val parts = expressions.joinToString(" ") {expr -> expr.accept(this)}
         return "($name $parts)"

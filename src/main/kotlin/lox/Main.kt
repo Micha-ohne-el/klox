@@ -34,6 +34,11 @@ fun error(error: RuntimeError) {
 }
 
 
+private var hadError = false
+private var hadRuntimeError = false
+
+private val interpreter = Interpreter()
+
 private fun runFile(path: String) {
     val content = File(path).readText()
     run(content)
@@ -79,8 +84,3 @@ private fun report(line: Int, location: String, message: String) {
     System.err.println("[line $line] Error$location: $message")
     hadError = true
 }
-
-private var hadError = false
-private var hadRuntimeError = false
-
-private val interpreter = Interpreter()
