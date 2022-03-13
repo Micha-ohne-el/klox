@@ -5,12 +5,14 @@ import lox.TokenType.*
 class Parser(
     private val tokens: List<Token>
 ) {
-    fun parse(): Expression? {
-        try {
-            return parseExpression()
-        } catch (error: ParseError) {
-            return null
+    fun parse(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+
+        while (!isAtEnd) {
+            statements.add(parseDeclaration() ?: continue)
         }
+
+        return statements
     }
 
 
@@ -20,8 +22,92 @@ class Parser(
 
     private val isAtEnd get() = peek().type == EndOfFile
 
+    private fun parseDeclaration(): Statement? {
+        try {
+            if (match(Var)) {
+                return parseVarDeclaration()
+            }
+
+            return parseStatement()
+        } catch (error: ParseError) {
+            synchronize()
+            return null
+        }
+    }
+
+    private fun parseVarDeclaration(): Statement {
+        val name = consume(Identifier, "Expect variable name.")
+
+        val initializer = if (match(Equal)) {
+            parseExpression()
+        } else {
+            null
+        }
+
+        consume(Semicolon, "Expect ';' after variable declaration.")
+
+        return Statement.Variable(name, initializer)
+    }
+
+    private fun parseStatement(): Statement {
+        if (match(Print)) {
+            return parsePrintStatement()
+        }
+
+        if (match(LeftBrace)) {
+            return Statement.Block(parseBlockStatement())
+        }
+
+        return parseExpressionStatement()
+    }
+
+    private fun parsePrintStatement(): Statement {
+        val expression = parseExpression()
+
+        consume(Semicolon, "Expect ';' after statement.")
+
+        return Statement.Print(expression)
+    }
+
+    private fun parseBlockStatement(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+
+        while (!check(RightBrace) && !isAtEnd) {
+            statements.add(parseDeclaration() ?: continue)
+        }
+
+        consume(RightBrace, "Expect '}' after block.")
+
+        return statements
+    }
+
+    private fun parseExpressionStatement(): Statement {
+        val expression = parseExpression()
+
+        consume(Semicolon, "Expect ';' after expression.")
+
+        return Statement.Expression(expression)
+    }
+
     private fun parseExpression(): Expression {
-        return parseEquality()
+        return parseAssignment()
+    }
+
+    private fun parseAssignment(): Expression {
+        val expression = parseEquality()
+
+        if (match(Equal)) {
+            val equals = previous
+            val value = parseAssignment()
+
+            if (expression is Expression.Variable) {
+                return Expression.Assignment(expression.name, value)
+            }
+
+            error(equals, "Invalid assignment target.")
+        }
+
+        return expression
     }
 
     private fun parseEquality(): Expression {
@@ -89,6 +175,10 @@ class Parser(
 
         if (match(Number, TokenType.String)) {
             return Expression.Literal(previous.literal)
+        }
+
+        if (match(Identifier)) {
+            return Expression.Variable(previous)
         }
 
         if (match(LeftParen)) {

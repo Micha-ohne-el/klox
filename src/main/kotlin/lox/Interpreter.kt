@@ -2,11 +2,12 @@ package lox
 
 import lox.TokenType.*
 
-class Interpreter : Expression.Visitor<Any?> {
-    fun interpret(expression: Expression) {
+class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
+    fun interpret(statements: List<Statement>) {
         try {
-            val value = evaluate(expression)
-            println(stringify(value))
+            for (statement in statements) {
+                execute(statement)
+            }
         } catch (error: RuntimeError) {
             error(error)
         }
@@ -83,6 +84,62 @@ class Interpreter : Expression.Visitor<Any?> {
         return evaluate(groupingExpression.expression)
     }
 
+    override fun visit(variableExpression: Expression.Variable): Any? {
+        return environment.get(variableExpression.name)
+    }
+
+    override fun visit(assignmentExpression: Expression.Assignment): Any? {
+        val value = evaluate(assignmentExpression.value)
+
+        environment.assign(assignmentExpression.name, value)
+
+        return value
+    }
+
+    override fun visit(expressionStatement: Statement.Expression) {
+        evaluate(expressionStatement.expression)
+    }
+
+    override fun visit(printStatement: Statement.Print) {
+        val expression = evaluate(printStatement.expression)
+
+        println(stringify(expression))
+    }
+
+    override fun visit(variableStatement: Statement.Variable) {
+        val value = if (variableStatement.initializer != null) {
+            evaluate(variableStatement.initializer)
+        } else {
+            null
+        }
+
+        environment.define(variableStatement.name.lexeme, value)
+    }
+
+    override fun visit(blockStatement: Statement.Block) {
+        executeBlock(blockStatement.statements, Environment(environment))
+    }
+
+
+    private var environment = Environment()
+
+    private fun execute(statement: Statement) {
+        statement.accept(this)
+    }
+
+    private fun executeBlock(statements: List<Statement>, newEnvironment: Environment) {
+        val previousEnvironment = environment
+
+        try {
+            environment = newEnvironment
+
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            environment = previousEnvironment
+        }
+    }
 
     private fun evaluate(expression: Expression): Any? {
         return expression.accept(this)

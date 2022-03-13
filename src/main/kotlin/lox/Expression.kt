@@ -30,10 +30,25 @@ abstract class Expression {
         override fun <R> accept(visitor: Visitor<R>) = visitor.visit(this)
     }
 
+    open class Variable(
+        val name: Token
+    ) : Expression() {
+        override fun <R> accept(visitor: Visitor<R>) = visitor.visit(this)
+    }
+
+    open class Assignment(
+        val name: Token,
+        val value: Expression
+    ) : Expression() {
+        override fun <R> accept(visitor: Visitor<R>) = visitor.visit(this)
+    }
+
     interface Visitor<R> {
         fun visit(literalExpression: Literal): R
         fun visit(prefixExpression: Prefix): R
         fun visit(binaryExpression: Binary): R
         fun visit(groupingExpression: Grouping): R
+        fun visit(variableExpression: Variable): R
+        fun visit(assignmentExpression: Assignment): R
     }
 }

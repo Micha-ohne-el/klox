@@ -21,6 +21,14 @@ class AstPrinter : Expression.Visitor<String> {
         return parenthesize("group", groupingExpression.expression)
     }
 
+    override fun visit(variableExpression: Expression.Variable): String {
+        return parenthesize("var", variableExpression)
+    }
+
+    override fun visit(assignmentExpression: Expression.Assignment): String {
+        return parenthesize("assign", assignmentExpression)
+    }
+
 
     private fun parenthesize(name: String, vararg expressions: Expression): String {
         val parts = expressions.joinToString(" ") {expr -> expr.accept(this)}
