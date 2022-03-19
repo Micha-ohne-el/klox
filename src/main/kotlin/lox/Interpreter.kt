@@ -152,7 +152,7 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
             null -> false
             is Boolean -> value
 
-            else -> false
+            else -> true
         }
     }
 
