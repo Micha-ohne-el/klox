@@ -52,6 +52,18 @@ class Parser(
     }
 
     private fun parseStatement(): Statement {
+        if (match(If)) {
+            return parseIfStatement()
+        }
+
+        if (match(While)) {
+            return parseWhileStatement()
+        }
+
+        if (match(For)) {
+            return parseForStatement()
+        }
+
         if (match(Print)) {
             return parsePrintStatement()
         }
@@ -61,6 +73,78 @@ class Parser(
         }
 
         return parseExpressionStatement()
+    }
+
+    private fun parseIfStatement(): Statement {
+        consume(LeftParen, "Expect '(' after 'if'.")
+
+        val condition = parseExpression()
+
+        consume(RightParen, "Expect ')' after condition.")
+
+        val thenBranch = parseStatement()
+
+        val elseBranch = if (match(Else)) {
+            parseStatement()
+        } else {
+            null
+        }
+
+        return IfStatement(condition, thenBranch, elseBranch)
+    }
+
+    private fun parseWhileStatement(): Statement {
+        consume(LeftParen, "Expect '(' after 'while'.")
+
+        val condition = parseExpression()
+
+        consume(RightParen, "Expect ')' after condition.")
+
+        val statement = parseStatement()
+
+        return WhileStatement(condition, statement)
+    }
+
+    private fun parseForStatement(): Statement {
+        consume(LeftParen, "Expect '(' after 'for'.")
+
+        val initializer = if (match(Semicolon)) {
+            null
+        } else if (match(Var)) {
+            parseVarDeclaration()
+        } else {
+            parseExpressionStatement()
+        }
+
+        val condition = if (!check(Semicolon)) {
+            parseExpression()
+        } else {
+            LiteralExpression(true)
+        }
+
+        consume(Semicolon, "Expect ';' after condition.")
+
+        val increment = if (!check(RightParen)) {
+            parseExpression()
+        } else {
+            null
+        }
+
+        consume(RightParen, "Expect ')' after for clauses.")
+
+        var body = parseStatement()
+
+        if (increment != null) {
+            body = BlockStatement(listOf(body, ExpressionStatement(increment)))
+        }
+
+        body = WhileStatement(condition, body)
+
+        if (initializer != null) {
+            body = BlockStatement(listOf(initializer, body))
+        }
+
+        return body
     }
 
     private fun parsePrintStatement(): Statement {
@@ -96,7 +180,7 @@ class Parser(
     }
 
     private fun parseAssignment(): Expression {
-        val expression = parseEquality()
+        val expression = parseOr()
 
         if (match(Equal)) {
             val equals = previous
@@ -107,6 +191,32 @@ class Parser(
             }
 
             error(equals, "Invalid assignment target.")
+        }
+
+        return expression
+    }
+
+    private fun parseOr(): Expression {
+        var expression = parseAnd()
+
+        while (match(Or)) {
+            val operator = previous
+            val right = parseAnd()
+
+            expression = ShortingExpression(expression, operator, right)
+        }
+
+        return expression
+    }
+
+    private fun parseAnd(): Expression {
+        var expression = parseEquality()
+
+        while (match(And)) {
+            val operator = previous
+            val right = parseEquality()
+
+            expression = ShortingExpression(expression, operator, right)
         }
 
         return expression

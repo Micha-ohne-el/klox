@@ -10,5 +10,6 @@ abstract class Expression {
         fun visit(groupingExpression: GroupingExpression): R
         fun visit(variableExpression: VariableExpression): R
         fun visit(assignmentExpression: AssignmentExpression): R
+        fun visit(shortingExpression: ShortingExpression): R
     }
 }

@@ -8,5 +8,7 @@ abstract class Statement {
         fun visit(printStatement: PrintStatement)
         fun visit(variableStatement: VariableStatement)
         fun visit(blockStatement: BlockStatement)
+        fun visit(ifStatement: IfStatement)
+        fun visit(whileStatement: WhileStatement)
     }
 }

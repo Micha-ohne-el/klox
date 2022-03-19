@@ -98,6 +98,18 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return value
     }
 
+    override fun visit(shortingExpression: ShortingExpression): Any? {
+        val left = evaluate(shortingExpression.left)
+
+        if (shortingExpression.operator.type == Or) {
+            if (isTruthy(left)) {return left}
+        } else {
+            if (!isTruthy(left)) {return left}
+        }
+
+        return evaluate(shortingExpression.right)
+    }
+
     override fun visit(expressionStatement: ExpressionStatement) {
         evaluate(expressionStatement.expression)
     }
@@ -120,6 +132,22 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
 
     override fun visit(blockStatement: BlockStatement) {
         executeBlock(blockStatement.statements, Environment(environment))
+    }
+
+    override fun visit(ifStatement: IfStatement) {
+        val condition = evaluate(ifStatement.condition)
+
+        if (isTruthy(condition)) {
+            execute(ifStatement.thenBranch)
+        } else if (ifStatement.elseBranch != null) {
+            execute(ifStatement.elseBranch)
+        }
+    }
+
+    override fun visit(whileStatement: WhileStatement) {
+        while (isTruthy(evaluate(whileStatement.condition))) {
+            execute(whileStatement.body)
+        }
     }
 
 
