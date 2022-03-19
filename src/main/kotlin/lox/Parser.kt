@@ -38,7 +38,7 @@ class Parser(
     }
 
     private fun parseVarDeclaration(): Statement {
-        val name = consume(Identifier, "Expect variable name.")
+        val name = consume(Identifier, "Expecting variable name.")
 
         val initializer = if (match(Equal)) {
             parseExpression()
@@ -46,7 +46,7 @@ class Parser(
             null
         }
 
-        consume(Semicolon, "Expect ';' after variable declaration.")
+        consume(Semicolon, "Expecting ';' after variable declaration.")
 
         return VariableStatement(name, initializer)
     }
@@ -76,11 +76,11 @@ class Parser(
     }
 
     private fun parseIfStatement(): Statement {
-        consume(LeftParen, "Expect '(' after 'if'.")
+        consume(LeftParen, "Expecting '(' after 'if'.")
 
         val condition = parseExpression()
 
-        consume(RightParen, "Expect ')' after condition.")
+        consume(RightParen, "Expecting ')' after condition.")
 
         val thenBranch = parseStatement()
 
@@ -94,11 +94,11 @@ class Parser(
     }
 
     private fun parseWhileStatement(): Statement {
-        consume(LeftParen, "Expect '(' after 'while'.")
+        consume(LeftParen, "Expecting '(' after 'while'.")
 
         val condition = parseExpression()
 
-        consume(RightParen, "Expect ')' after condition.")
+        consume(RightParen, "Expecting ')' after condition.")
 
         val statement = parseStatement()
 
@@ -106,7 +106,7 @@ class Parser(
     }
 
     private fun parseForStatement(): Statement {
-        consume(LeftParen, "Expect '(' after 'for'.")
+        consume(LeftParen, "Expecting '(' after 'for'.")
 
         val initializer = if (match(Semicolon)) {
             null
@@ -122,7 +122,7 @@ class Parser(
             LiteralExpression(true)
         }
 
-        consume(Semicolon, "Expect ';' after condition.")
+        consume(Semicolon, "Expecting ';' after condition.")
 
         val increment = if (!check(RightParen)) {
             parseExpression()
@@ -130,7 +130,7 @@ class Parser(
             null
         }
 
-        consume(RightParen, "Expect ')' after for clauses.")
+        consume(RightParen, "Expecting ')' after for clauses.")
 
         var body = parseStatement()
 
@@ -150,7 +150,7 @@ class Parser(
     private fun parsePrintStatement(): Statement {
         val expression = parseExpression()
 
-        consume(Semicolon, "Expect ';' after statement.")
+        consume(Semicolon, "Expecting ';' after statement.")
 
         return PrintStatement(expression)
     }
@@ -162,7 +162,7 @@ class Parser(
             statements.add(parseDeclaration() ?: continue)
         }
 
-        consume(RightBrace, "Expect '}' after block.")
+        consume(RightBrace, "Expecting '}' after block.")
 
         return statements
     }
@@ -170,7 +170,7 @@ class Parser(
     private fun parseExpressionStatement(): Statement {
         val expression = parseExpression()
 
-        consume(Semicolon, "Expect ';' after expression.")
+        consume(Semicolon, "Expecting ';' after expression.")
 
         return ExpressionStatement(expression)
     }
@@ -295,12 +295,12 @@ class Parser(
 
         if (match(LeftParen)) {
             val expression = parseExpression()
-            consume(RightParen, "Expect ')' after expression.")
+            consume(RightParen, "Expecting ')' after expression.")
 
             return GroupingExpression(expression)
         }
 
-        throw error(peek(), "Expect expression.")
+        throw error(peek(), "Expecting expression.")
     }
 
     private fun match(vararg types: TokenType): Boolean {
