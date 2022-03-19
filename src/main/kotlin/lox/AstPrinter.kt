@@ -24,11 +24,17 @@ class AstPrinter : Expression.Visitor<String> {
     }
 
     override fun visit(variableExpression: VariableExpression): String {
-        return parenthesize("var", variableExpression)
+        return "(var ${variableExpression.name.lexeme})"
     }
 
     override fun visit(assignmentExpression: AssignmentExpression): String {
-        return parenthesize("assign", assignmentExpression)
+        return "(assign ${assignmentExpression.name.lexeme} ${assignmentExpression.value.accept(this)})"
+    }
+
+    override fun visit(shortingExpression: ShortingExpression): String {
+        with (shortingExpression) {
+            return parenthesize(operator.lexeme, left, right)
+        }
     }
 
 
