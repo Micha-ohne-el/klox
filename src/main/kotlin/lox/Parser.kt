@@ -350,6 +350,8 @@ class Parser(
 
             when (peek().type) {
                 If, For, While, Return, Var, Fun, Class, Print -> return
+
+                else -> {}
             }
 
             advance()
