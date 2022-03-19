@@ -1,6 +1,8 @@
 package lox
 
 import lox.TokenType.*
+import lox.expressions.*
+import lox.statements.*
 
 class Parser(
     private val tokens: List<Token>
@@ -46,7 +48,7 @@ class Parser(
 
         consume(Semicolon, "Expect ';' after variable declaration.")
 
-        return Statement.Variable(name, initializer)
+        return VariableStatement(name, initializer)
     }
 
     private fun parseStatement(): Statement {
@@ -55,7 +57,7 @@ class Parser(
         }
 
         if (match(LeftBrace)) {
-            return Statement.Block(parseBlockStatement())
+            return BlockStatement(parseBlockStatement())
         }
 
         return parseExpressionStatement()
@@ -66,7 +68,7 @@ class Parser(
 
         consume(Semicolon, "Expect ';' after statement.")
 
-        return Statement.Print(expression)
+        return PrintStatement(expression)
     }
 
     private fun parseBlockStatement(): List<Statement> {
@@ -86,7 +88,7 @@ class Parser(
 
         consume(Semicolon, "Expect ';' after expression.")
 
-        return Statement.Expression(expression)
+        return ExpressionStatement(expression)
     }
 
     private fun parseExpression(): Expression {
@@ -100,8 +102,8 @@ class Parser(
             val equals = previous
             val value = parseAssignment()
 
-            if (expression is Expression.Variable) {
-                return Expression.Assignment(expression.name, value)
+            if (expression is VariableExpression) {
+                return AssignmentExpression(expression.name, value)
             }
 
             error(equals, "Invalid assignment target.")
@@ -116,7 +118,7 @@ class Parser(
         while (match(BangEqual, EqualEqual)) {
             val operator = previous
             val right = parseComparison()
-            expression = Expression.Binary(expression, operator, right)
+            expression = BinaryExpression(expression, operator, right)
         }
 
         return expression
@@ -128,7 +130,7 @@ class Parser(
         while (match(Greater, GreaterEqual, Less, LessEqual)) {
             val operator = previous
             val right = parseTerm()
-            expression = Expression.Binary(expression, operator, right)
+            expression = BinaryExpression(expression, operator, right)
         }
 
         return expression
@@ -140,7 +142,7 @@ class Parser(
         while (match(Plus, Minus)) {
             val operator = previous
             val right = parseFactor()
-            expression = Expression.Binary(expression, operator, right)
+            expression = BinaryExpression(expression, operator, right)
         }
 
         return expression
@@ -152,7 +154,7 @@ class Parser(
         while (match(Asterisk, Slash)) {
             val operator = previous
             val right = parsePrefix()
-            expression = Expression.Binary(expression, operator, right)
+            expression = BinaryExpression(expression, operator, right)
         }
 
         return expression
@@ -162,30 +164,30 @@ class Parser(
         if (match(Bang, Minus)) {
             val operator = previous
             val right = parsePrefix()
-            return Expression.Prefix(operator, right)
+            return PrefixExpression(operator, right)
         }
 
         return parsePrimary()
     }
 
     private fun parsePrimary(): Expression {
-        if (match(False)) {return Expression.Literal(false)}
-        if (match(True)) {return Expression.Literal(true)}
-        if (match(Nil)) {return Expression.Literal(null)}
+        if (match(False)) {return LiteralExpression(false)}
+        if (match(True)) {return LiteralExpression(true)}
+        if (match(Nil)) {return LiteralExpression(null)}
 
         if (match(Number, TokenType.String)) {
-            return Expression.Literal(previous.literal)
+            return LiteralExpression(previous.literal)
         }
 
         if (match(Identifier)) {
-            return Expression.Variable(previous)
+            return VariableExpression(previous)
         }
 
         if (match(LeftParen)) {
             val expression = parseExpression()
             consume(RightParen, "Expect ')' after expression.")
 
-            return Expression.Grouping(expression)
+            return GroupingExpression(expression)
         }
 
         throw error(peek(), "Expect expression.")

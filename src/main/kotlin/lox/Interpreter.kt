@@ -1,6 +1,8 @@
 package lox
 
 import lox.TokenType.*
+import lox.expressions.*
+import lox.statements.*
 
 class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
     fun interpret(statements: List<Statement>) {
@@ -13,11 +15,11 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
-    override fun visit(literalExpression: Expression.Literal): Any? {
+    override fun visit(literalExpression: LiteralExpression): Any? {
         return literalExpression.value
     }
 
-    override fun visit(prefixExpression: Expression.Prefix): Any? {
+    override fun visit(prefixExpression: PrefixExpression): Any? {
         val right = evaluate(prefixExpression.right)
 
         return when (prefixExpression.operator.type) {
@@ -28,7 +30,7 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
-    override fun visit(binaryExpression: Expression.Binary): Any? {
+    override fun visit(binaryExpression: BinaryExpression): Any? {
         val left = evaluate(binaryExpression.left)
         val right = evaluate(binaryExpression.right)
 
@@ -80,15 +82,15 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
-    override fun visit(groupingExpression: Expression.Grouping): Any? {
+    override fun visit(groupingExpression: GroupingExpression): Any? {
         return evaluate(groupingExpression.expression)
     }
 
-    override fun visit(variableExpression: Expression.Variable): Any? {
+    override fun visit(variableExpression: VariableExpression): Any? {
         return environment.get(variableExpression.name)
     }
 
-    override fun visit(assignmentExpression: Expression.Assignment): Any? {
+    override fun visit(assignmentExpression: AssignmentExpression): Any? {
         val value = evaluate(assignmentExpression.value)
 
         environment.assign(assignmentExpression.name, value)
@@ -96,17 +98,17 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return value
     }
 
-    override fun visit(expressionStatement: Statement.Expression) {
+    override fun visit(expressionStatement: ExpressionStatement) {
         evaluate(expressionStatement.expression)
     }
 
-    override fun visit(printStatement: Statement.Print) {
+    override fun visit(printStatement: PrintStatement) {
         val expression = evaluate(printStatement.expression)
 
         println(stringify(expression))
     }
 
-    override fun visit(variableStatement: Statement.Variable) {
+    override fun visit(variableStatement: VariableStatement) {
         val value = if (variableStatement.initializer != null) {
             evaluate(variableStatement.initializer)
         } else {
@@ -116,7 +118,7 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         environment.define(variableStatement.name.lexeme, value)
     }
 
-    override fun visit(blockStatement: Statement.Block) {
+    override fun visit(blockStatement: BlockStatement) {
         executeBlock(blockStatement.statements, Environment(environment))
     }
 

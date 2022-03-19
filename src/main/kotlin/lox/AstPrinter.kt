@@ -1,31 +1,33 @@
 package lox
 
+import lox.expressions.*
+
 class AstPrinter : Expression.Visitor<String> {
     fun print(expression: Expression) = expression.accept(this)
 
-    override fun visit(literalExpression: Expression.Literal): String {
+    override fun visit(literalExpression: LiteralExpression): String {
         return (literalExpression.value ?: "nil").toString()
     }
 
-    override fun visit(prefixExpression: Expression.Prefix): String {
+    override fun visit(prefixExpression: PrefixExpression): String {
         return parenthesize(prefixExpression.operator.lexeme, prefixExpression.right)
     }
 
-    override fun visit(binaryExpression: Expression.Binary): String {
+    override fun visit(binaryExpression: BinaryExpression): String {
         with (binaryExpression) {
             return parenthesize(operator.lexeme, left, right)
         }
     }
 
-    override fun visit(groupingExpression: Expression.Grouping): String {
+    override fun visit(groupingExpression: GroupingExpression): String {
         return parenthesize("group", groupingExpression.expression)
     }
 
-    override fun visit(variableExpression: Expression.Variable): String {
+    override fun visit(variableExpression: VariableExpression): String {
         return parenthesize("var", variableExpression)
     }
 
-    override fun visit(assignmentExpression: Expression.Assignment): String {
+    override fun visit(assignmentExpression: AssignmentExpression): String {
         return parenthesize("assign", assignmentExpression)
     }
 
