@@ -26,6 +26,10 @@ class Parser(
 
     private fun parseDeclaration(): Statement? {
         try {
+            if (match(Fun)) {
+                return parseFunDeclaration()
+            }
+
             if (match(Var)) {
                 return parseVarDeclaration()
             }
@@ -35,6 +39,36 @@ class Parser(
             synchronize()
             return null
         }
+    }
+
+    private fun parseFunDeclaration(): Statement {
+        return parseFunction(kind = "function")
+    }
+
+    private fun parseFunction(kind: String): FunctionStatement {
+        val name = consume(Identifier, "Expecting $kind name.")
+
+        consume(LeftParen, "Expecting '(' after $kind name.")
+
+        val parameters = mutableListOf<Token>()
+
+        if (!check(RightParen)) {
+            do {
+                if (parameters.size >= 255) {
+                    error(peek(), "Can't have more than 255 parameters.")
+                }
+
+                parameters.add(consume(Identifier, "Expecting parameter name."))
+            } while (match(Comma))
+        }
+
+        consume(RightParen, "Expecting ')' after parameters.")
+
+        consume(LeftBrace, "Expecting '{' before $kind body.")
+
+        val body = parseBlockStatement()
+
+        return FunctionStatement(name, parameters, body)
     }
 
     private fun parseVarDeclaration(): Statement {
@@ -66,6 +100,10 @@ class Parser(
 
         if (match(Print)) {
             return parsePrintStatement()
+        }
+
+        if (match(Return)) {
+            return parseReturnStatement()
         }
 
         if (match(LeftBrace)) {
@@ -153,6 +191,20 @@ class Parser(
         consume(Semicolon, "Expecting ';' after statement.")
 
         return PrintStatement(expression)
+    }
+
+    private fun parseReturnStatement(): Statement {
+        val keyword = previous
+
+        val value = if (!check(Semicolon)) {
+            parseExpression()
+        } else {
+            null
+        }
+
+        consume(Semicolon, "Expecting ';' after return value.")
+
+        return ReturnStatement(keyword, value)
     }
 
     private fun parseBlockStatement(): List<Statement> {
@@ -277,7 +329,39 @@ class Parser(
             return PrefixExpression(operator, right)
         }
 
-        return parsePrimary()
+        return parseCall()
+    }
+
+    private fun parseCall(): Expression {
+        var expression = parsePrimary()
+
+        while (true) {
+            if (match(LeftParen)) {
+                expression = finishCall(expression)
+            } else {
+                break
+            }
+        }
+
+        return expression
+    }
+
+    private fun finishCall(callee: Expression): Expression {
+        val arguments = mutableListOf<Expression>()
+
+        if (!check(RightParen)) {
+            do {
+                if (arguments.size >= 255) {
+                    error(peek(), "Can't have more than 255 arguments.")
+                }
+
+                arguments.add(parseExpression())
+            } while (match(Comma))
+        }
+
+        val paren = consume(RightParen, "Expecting ')' after arguments.")
+
+        return CallExpression(callee, paren, arguments)
     }
 
     private fun parsePrimary(): Expression {

@@ -10,5 +10,7 @@ abstract class Statement {
         fun visit(blockStatement: BlockStatement)
         fun visit(ifStatement: IfStatement)
         fun visit(whileStatement: WhileStatement)
+        fun visit(functionStatement: FunctionStatement)
+        fun visit(returnStatement: ReturnStatement)
     }
 }

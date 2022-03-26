@@ -5,6 +5,8 @@ import lox.expressions.*
 import lox.statements.*
 
 class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
+    val globals = Environment()
+
     fun interpret(statements: List<Statement>) {
         try {
             for (statement in statements) {
@@ -12,6 +14,24 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
             }
         } catch (error: RuntimeError) {
             error(error)
+        }
+    }
+
+    fun execute(statement: Statement) {
+        statement.accept(this)
+    }
+
+    fun executeBlock(statements: List<Statement>, newEnvironment: Environment) {
+        val previousEnvironment = environment
+
+        try {
+            environment = newEnvironment
+
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            environment = previousEnvironment
         }
     }
 
@@ -82,6 +102,25 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
+    override fun visit(callExpression: CallExpression): Any? {
+        val callee = evaluate(callExpression.callee)
+
+        val arguments = callExpression.arguments.map(::evaluate)
+
+        if (callee !is Callable) {
+            throw RuntimeError(callExpression.paren, "Can only call functions and classes.")
+        }
+
+        if (arguments.size != callee.arity) {
+            throw RuntimeError(
+                callExpression.paren,
+                "Expected ${callee.arity} arguments but got ${arguments.size}."
+            )
+        }
+
+        return callee.call(this, arguments)
+    }
+
     override fun visit(groupingExpression: GroupingExpression): Any? {
         return evaluate(groupingExpression.expression)
     }
@@ -150,25 +189,27 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
+    override fun visit(functionStatement: FunctionStatement) {
+        val function = Function(functionStatement, environment)
 
-    private var environment = Environment()
-
-    private fun execute(statement: Statement) {
-        statement.accept(this)
+        environment.define(functionStatement.name.lexeme, function)
     }
 
-    private fun executeBlock(statements: List<Statement>, newEnvironment: Environment) {
-        val previousEnvironment = environment
-
-        try {
-            environment = newEnvironment
-
-            for (statement in statements) {
-                execute(statement)
-            }
-        } finally {
-            environment = previousEnvironment
+    override fun visit(returnStatement: ReturnStatement) {
+        val value = if (returnStatement.value != null) {
+            evaluate(returnStatement.value)
+        } else {
+            null
         }
+
+        throw Return(value)
+    }
+
+
+    private var environment = globals
+
+    init {
+        globals.define("clock", Clock())
     }
 
     private fun evaluate(expression: Expression): Any? {

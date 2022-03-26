@@ -37,6 +37,13 @@ class AstPrinter : Expression.Visitor<String> {
         }
     }
 
+    override fun visit(callExpression: CallExpression): String {
+        return parenthesize(
+            "call ${callExpression.callee.accept(this)} with",
+            *callExpression.arguments.toTypedArray()
+        )
+    }
+
 
     private fun parenthesize(name: String, vararg expressions: Expression): String {
         val parts = expressions.joinToString(" ") {expr -> expr.accept(this)}
