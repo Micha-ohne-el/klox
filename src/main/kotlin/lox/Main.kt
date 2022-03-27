@@ -73,6 +73,11 @@ private fun run(source: String) {
 
     if (hadError) {return}
 
+    val resolver = Resolver(interpreter)
+    resolver.resolve(statements)
+
+    if (hadError) {return}
+
     interpreter.interpret(statements)
 }
 

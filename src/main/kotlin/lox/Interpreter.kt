@@ -35,6 +35,10 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
     }
 
+    fun resolve(expression: Expression, depth: Int) {
+        locals[expression] = depth
+    }
+
     override fun visit(literalExpression: LiteralExpression): Any? {
         return literalExpression.value
     }
@@ -126,13 +130,19 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
     }
 
     override fun visit(variableExpression: VariableExpression): Any? {
-        return environment.get(variableExpression.name)
+        return lookUpVariable(variableExpression.name, variableExpression)
     }
 
     override fun visit(assignmentExpression: AssignmentExpression): Any? {
         val value = evaluate(assignmentExpression.value)
 
-        environment.assign(assignmentExpression.name, value)
+        val distance = locals[assignmentExpression]
+
+        if (distance != null) {
+            environment.assignAt(distance, assignmentExpression.name, value)
+        } else {
+            globals.assign(assignmentExpression.name, value)
+        }
 
         return value
     }
@@ -207,6 +217,7 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
 
 
     private var environment = globals
+    private val locals = mutableMapOf<Expression, Int>()
 
     init {
         globals.define("clock", Clock())
@@ -247,5 +258,15 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
 
         return value.toString()
+    }
+
+    private fun lookUpVariable(name: Token, expression: Expression): Any? {
+        val distance = locals[expression]
+
+        return if (distance != null) {
+            environment.getAt(distance, name.lexeme)
+        } else {
+            globals.get(name)
+        }
     }
 }
