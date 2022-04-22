@@ -153,7 +153,7 @@ class Scanner(
             "return" to Return,
             "var" to Var,
             "fun" to Fun,
-            "Class" to Class,
+            "class" to Class,
             "this" to This,
             "super" to Super,
             "print" to Print
