@@ -73,6 +73,10 @@ class Resolver(
         }
 
         if (returnStatement.value != null) {
+            if (currentFunctionType == FunctionType.Initializer) {
+                error(returnStatement.keyword, "Can't return a value from an initializer.")
+            }
+
             resolve(returnStatement.value)
         }
     }
@@ -81,6 +85,28 @@ class Resolver(
         resolve(whileStatement.condition)
 
         resolve(whileStatement.body)
+    }
+
+    override fun visit(classStatement: ClassStatement) {
+        val enclosingClassType = currentClassType
+        currentClassType = ClassType.Class
+
+        declare(classStatement.name)
+        define(classStatement.name)
+
+        scoped {
+            scopes.peek()["this"] = true
+
+            for (method in classStatement.methods) {
+                if (method.name.lexeme == "init") {
+                    resolveFunction(method, FunctionType.Initializer)
+                } else {
+                    resolveFunction(method, FunctionType.Method)
+                }
+            }
+        }
+
+        currentClassType = enclosingClassType
     }
 
     override fun visit(binaryExpression: BinaryExpression) {
@@ -112,9 +138,28 @@ class Resolver(
         resolve(prefixExpression.right)
     }
 
+    override fun visit(getExpression: GetExpression) {
+        resolve(getExpression.target)
+    }
+
+    override fun visit(setExpression: SetExpression) {
+        resolve(setExpression.value)
+        resolve(setExpression.target)
+    }
+
+    override fun visit(thisExpression: ThisExpression) {
+        if (currentClassType == ClassType.None) {
+            error(thisExpression.keyword, "Can't use 'this' outside of a class.")
+            return
+        }
+
+        resolveLocal(thisExpression, thisExpression.keyword)
+    }
+
 
     private val scopes = Stack<MutableMap<String, Boolean>>()
     private var currentFunctionType = FunctionType.None
+    private var currentClassType = ClassType.None
 
     private fun scoped(block: () -> Unit) {
         scopes.push(mutableMapOf())
@@ -132,7 +177,6 @@ class Resolver(
         expression.accept(this)
     }
 
-    // TODO: Remove second parameter?
     private fun resolveLocal(expression: Expression, name: Token) {
         for (index in scopes.indices.reversed()) {
             if (name.lexeme in scopes[index]) {
@@ -184,6 +228,13 @@ class Resolver(
 
     private enum class FunctionType {
         None,
-        Function
+        Function,
+        Method,
+        Initializer
+    }
+
+    private enum class ClassType {
+        None,
+        Class
     }
 }

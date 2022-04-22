@@ -12,5 +12,6 @@ abstract class Statement {
         fun visit(whileStatement: WhileStatement)
         fun visit(functionStatement: FunctionStatement)
         fun visit(returnStatement: ReturnStatement)
+        fun visit(classStatement: ClassStatement)
     }
 }

@@ -26,6 +26,10 @@ class Parser(
 
     private fun parseDeclaration(): Statement? {
         try {
+            if (match(Class)) {
+                return parseClassDeclaration()
+            }
+
             if (match(Fun)) {
                 return parseFunDeclaration()
             }
@@ -39,6 +43,20 @@ class Parser(
             synchronize()
             return null
         }
+    }
+
+    private fun parseClassDeclaration(): Statement {
+        val name = consume(Identifier, "Expecting class name.")
+        consume(LeftBrace, "Expecting '{' before class body.")
+
+        val methods = mutableListOf<FunctionStatement>()
+        while (!check(RightBrace) && !isAtEnd) {
+            methods.add(parseFunction("method"))
+        }
+
+        consume(RightBrace, "Expecting '}' after class body.")
+
+        return ClassStatement(name, methods)
     }
 
     private fun parseFunDeclaration(): Statement {
@@ -240,6 +258,8 @@ class Parser(
 
             if (expression is VariableExpression) {
                 return AssignmentExpression(expression.name, value)
+            } else if (expression is GetExpression) {
+                return SetExpression(expression.target, expression.name, value)
             }
 
             error(equals, "Invalid assignment target.")
@@ -338,6 +358,10 @@ class Parser(
         while (true) {
             if (match(LeftParen)) {
                 expression = finishCall(expression)
+            } else if (match(Dot)) {
+                val name = consume(Identifier, "Expecting property name after '.'.")
+
+                expression = GetExpression(expression, name)
             } else {
                 break
             }
@@ -371,6 +395,10 @@ class Parser(
 
         if (match(Number, TokenType.String)) {
             return LiteralExpression(previous.literal)
+        }
+
+        if (match(This)) {
+            return ThisExpression(previous)
         }
 
         if (match(Identifier)) {

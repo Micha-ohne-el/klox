@@ -1,0 +1,25 @@
+package lox
+
+class Class(
+    val name: String,
+    val methods: Map<String, Function>
+) : Callable {
+    override fun call(interpreter: Interpreter, arguments: List<Any?>): Instance {
+        val instance = Instance(this)
+
+        val initializer = findMethod("init")
+        initializer?.bind(instance)?.call(interpreter, arguments)
+
+        return instance
+    }
+
+    override val arity: Int get() {
+        return findMethod("init")?.arity ?: 0
+    }
+
+    fun findMethod(name: String): Function? {
+        return methods[name]
+    }
+
+    override fun toString() = name
+}

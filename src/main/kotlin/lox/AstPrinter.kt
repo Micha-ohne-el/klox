@@ -44,6 +44,21 @@ class AstPrinter : Expression.Visitor<String> {
         )
     }
 
+    override fun visit(getExpression: GetExpression): String {
+        with (getExpression) {
+            return "get ${target.accept(this@AstPrinter)}.$name"
+        }
+    }
+
+    override fun visit(setExpression: SetExpression): String {
+        with (setExpression) {
+            return "set ${target.accept(this@AstPrinter)}.$name ${value.accept(this@AstPrinter)}"
+        }
+    }
+
+    override fun visit(thisExpression: ThisExpression): String {
+        return "(this)"
+    }
 
     private fun parenthesize(name: String, vararg expressions: Expression): String {
         val parts = expressions.joinToString(" ") {expr -> expr.accept(this)}

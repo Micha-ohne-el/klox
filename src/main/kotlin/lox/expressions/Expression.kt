@@ -12,5 +12,8 @@ abstract class Expression {
         fun visit(assignmentExpression: AssignmentExpression): R
         fun visit(shortingExpression: ShortingExpression): R
         fun visit(callExpression: CallExpression): R
+        fun visit(getExpression: GetExpression): R
+        fun visit(setExpression: SetExpression): R
+        fun visit(thisExpression: ThisExpression): R
     }
 }

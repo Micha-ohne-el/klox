@@ -125,12 +125,40 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return callee.call(this, arguments)
     }
 
+    override fun visit(getExpression: GetExpression): Any? {
+        val target = evaluate(getExpression.target)
+
+        if (target is Instance) {
+            return target.get(getExpression.name)
+        }
+
+        throw RuntimeError(getExpression.name, "Only instances have properties.")
+    }
+
+    override fun visit(setExpression: SetExpression): Any? {
+        val target = evaluate(setExpression.target)
+
+        if (target !is Instance) {
+            throw RuntimeError(setExpression.name, "Only instances have fields.")
+        }
+
+        val value = evaluate(setExpression.value)
+
+        target.set(setExpression.name, value)
+
+        return value
+    }
+
     override fun visit(groupingExpression: GroupingExpression): Any? {
         return evaluate(groupingExpression.expression)
     }
 
     override fun visit(variableExpression: VariableExpression): Any? {
         return lookUpVariable(variableExpression.name, variableExpression)
+    }
+
+    override fun visit(thisExpression: ThisExpression): Any? {
+        return lookUpVariable(thisExpression.keyword, thisExpression)
     }
 
     override fun visit(assignmentExpression: AssignmentExpression): Any? {
@@ -200,7 +228,7 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
     }
 
     override fun visit(functionStatement: FunctionStatement) {
-        val function = Function(functionStatement, environment)
+        val function = Function(functionStatement, environment, isInitializer = false)
 
         environment.define(functionStatement.name.lexeme, function)
     }
@@ -213,6 +241,21 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
 
         throw Return(value)
+    }
+
+    override fun visit(classStatement: ClassStatement) {
+        environment.define(classStatement.name.lexeme, null)
+
+        val methods = mutableMapOf<String, Function>()
+
+        for (method in classStatement.methods) {
+            val isInitializer = method.name.lexeme == "init"
+            methods[method.name.lexeme] = Function(method, environment, isInitializer)
+        }
+
+        val loxClass = Class(classStatement.name.lexeme, methods)
+
+        environment.assign(classStatement.name, loxClass)
     }
 
 
