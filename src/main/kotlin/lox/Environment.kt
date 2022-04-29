@@ -1,7 +1,7 @@
 package lox
 
 class Environment(
-    private val parent: Environment? = null
+    val parent: Environment? = null
 ) {
     fun define(name: String, value: Any?) {
         values[name] = value

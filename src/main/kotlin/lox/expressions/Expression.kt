@@ -15,5 +15,6 @@ abstract class Expression {
         fun visit(getExpression: GetExpression): R
         fun visit(setExpression: SetExpression): R
         fun visit(thisExpression: ThisExpression): R
+        fun visit(superExpression: SuperExpression): R
     }
 }

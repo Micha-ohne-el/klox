@@ -60,6 +60,10 @@ class AstPrinter : Expression.Visitor<String> {
         return "(this)"
     }
 
+    override fun visit(superExpression: SuperExpression): String {
+        return "(super)"
+    }
+
     private fun parenthesize(name: String, vararg expressions: Expression): String {
         val parts = expressions.joinToString(" ") {expr -> expr.accept(this)}
         return "($name $parts)"

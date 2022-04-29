@@ -2,6 +2,7 @@ package lox
 
 class Class(
     val name: String,
+    val superclass: Class?,
     val methods: Map<String, Function>
 ) : Callable {
     override fun call(interpreter: Interpreter, arguments: List<Any?>): Instance {
@@ -18,7 +19,7 @@ class Class(
     }
 
     fun findMethod(name: String): Function? {
-        return methods[name]
+        return methods[name] ?: superclass?.findMethod(name)
     }
 
     override fun toString() = name

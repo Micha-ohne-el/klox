@@ -94,6 +94,19 @@ class Resolver(
         declare(classStatement.name)
         define(classStatement.name)
 
+        if (classStatement.superclass != null) {
+            if (classStatement.name.lexeme == classStatement.superclass.name.lexeme) {
+                error(classStatement.superclass.name, "A class can't inherit from itself.")
+            }
+
+            currentClassType = ClassType.Subclass
+
+            resolve(classStatement.superclass)
+
+            scopes.push(mutableMapOf())
+            scopes.peek()["super"] = true
+        }
+
         scoped {
             scopes.peek()["this"] = true
 
@@ -104,6 +117,10 @@ class Resolver(
                     resolveFunction(method, FunctionType.Method)
                 }
             }
+        }
+
+        if (classStatement.superclass != null) {
+            scopes.pop()
         }
 
         currentClassType = enclosingClassType
@@ -154,6 +171,16 @@ class Resolver(
         }
 
         resolveLocal(thisExpression, thisExpression.keyword)
+    }
+
+    override fun visit(superExpression: SuperExpression) {
+        if (currentClassType == ClassType.None) {
+            error(superExpression.keyword, "Can't use 'super' outside of a class.")
+        } else if (currentClassType == ClassType.Class) {
+            error(superExpression.keyword, "Can't use 'super' in a class with no superclass.")
+        }
+
+        resolveLocal(superExpression, superExpression.keyword)
     }
 
 
@@ -235,6 +262,7 @@ class Resolver(
 
     private enum class ClassType {
         None,
-        Class
+        Class,
+        Subclass
     }
 }

@@ -47,6 +47,14 @@ class Parser(
 
     private fun parseClassDeclaration(): Statement {
         val name = consume(Identifier, "Expecting class name.")
+
+        val superclass = if (match(Less)) {
+            consume(Identifier, "Expecting superclass name.")
+            VariableExpression(previous)
+        } else {
+            null
+        }
+
         consume(LeftBrace, "Expecting '{' before class body.")
 
         val methods = mutableListOf<FunctionStatement>()
@@ -56,7 +64,7 @@ class Parser(
 
         consume(RightBrace, "Expecting '}' after class body.")
 
-        return ClassStatement(name, methods)
+        return ClassStatement(name, superclass, methods)
     }
 
     private fun parseFunDeclaration(): Statement {
@@ -395,6 +403,16 @@ class Parser(
 
         if (match(Number, TokenType.String)) {
             return LiteralExpression(previous.literal)
+        }
+
+        if (match(Super)) {
+            val keyword = previous
+
+            consume(Dot, "Expecting '.' after 'super'.")
+
+            val method = consume(Identifier, "Expecting superclass method name.")
+
+            return SuperExpression(keyword, method)
         }
 
         if (match(This)) {

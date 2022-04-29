@@ -161,6 +161,21 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return lookUpVariable(thisExpression.keyword, thisExpression)
     }
 
+    override fun visit(superExpression: SuperExpression): Function {
+        val distance = locals[superExpression] ?: 0
+        val superclass = environment.getAt(distance, "super") as Class
+
+        val target = environment.getAt(distance - 1, "this") as Instance
+
+        val method = superclass.findMethod(superExpression.method.lexeme)
+            ?: throw RuntimeError(
+                superExpression.method,
+                "Undefined property '${superExpression.method.lexeme}'."
+            )
+
+        return method.bind(target)
+    }
+
     override fun visit(assignmentExpression: AssignmentExpression): Any? {
         val value = evaluate(assignmentExpression.value)
 
@@ -244,7 +259,19 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
     }
 
     override fun visit(classStatement: ClassStatement) {
+        var superclass: Class? = null
+
+        if (classStatement.superclass != null) {
+            superclass = evaluate(classStatement.superclass) as? Class?
+                ?: throw RuntimeError(classStatement.superclass.name, "Superclass must be a class.")
+        }
+
         environment.define(classStatement.name.lexeme, null)
+
+        if (classStatement.superclass != null) {
+            environment = Environment(environment)
+            environment.define("super", superclass)
+        }
 
         val methods = mutableMapOf<String, Function>()
 
@@ -253,7 +280,11 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
             methods[method.name.lexeme] = Function(method, environment, isInitializer)
         }
 
-        val loxClass = Class(classStatement.name.lexeme, methods)
+        val loxClass = Class(classStatement.name.lexeme, superclass, methods)
+
+        if (classStatement.superclass != null) {
+            environment = environment.parent!!
+        }
 
         environment.assign(classStatement.name, loxClass)
     }
