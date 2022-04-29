@@ -53,11 +53,11 @@ class AstPrinter : Expression.Visitor<String> {
     }
 
     override fun visit(superExpression: SuperExpression): String {
-        return "(super)"
+        return "super"
     }
 
     override fun visit(thisExpression: ThisExpression): String {
-        return "(this)"
+        return "this"
     }
 
     override fun visit(variableExpression: VariableExpression): String {
