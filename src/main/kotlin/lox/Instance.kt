@@ -1,7 +1,7 @@
 package lox
 
 class Instance(
-    val loxClass: Class
+    private val loxClass: Class
 ) {
     fun get(name: Token): Any? {
         return fields.getOrElse(name.lexeme) {

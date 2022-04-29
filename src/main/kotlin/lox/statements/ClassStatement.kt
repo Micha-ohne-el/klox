@@ -3,7 +3,7 @@ package lox.statements
 import lox.Token
 import lox.expressions.VariableExpression
 
-open class ClassStatement(
+class ClassStatement(
     val name: Token,
     val superclass: VariableExpression?,
     val methods: List<FunctionStatement>

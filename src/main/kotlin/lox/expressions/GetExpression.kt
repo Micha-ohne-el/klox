@@ -2,7 +2,7 @@ package lox.expressions
 
 import lox.Token
 
-open class GetExpression(
+class GetExpression(
     val target: Expression,
     val name: Token
 ) : Expression() {

@@ -1,10 +1,11 @@
 package lox.statements
 
 import lox.Token
+import lox.expressions.Expression
 
-open class VariableStatement(
+class VariableStatement(
     val name: Token,
-    val initializer: lox.expressions.Expression?
+    val initializer: Expression?
 ) : Statement() {
     override fun accept(visitor: Visitor<Unit>) = visitor.visit(this)
 }

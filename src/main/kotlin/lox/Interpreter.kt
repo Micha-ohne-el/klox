@@ -5,7 +5,7 @@ import lox.expressions.*
 import lox.statements.*
 
 class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
-    val globals = Environment()
+    private val globals = Environment()
 
     fun interpret(statements: List<Statement>) {
         try {

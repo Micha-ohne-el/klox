@@ -2,8 +2,8 @@ package lox
 
 class Class(
     val name: String,
-    val superclass: Class?,
-    val methods: Map<String, Function>
+    private val superclass: Class?,
+    private val methods: Map<String, Function>
 ) : Callable {
     override fun call(interpreter: Interpreter, arguments: List<Any?>): Instance {
         val instance = Instance(this)
