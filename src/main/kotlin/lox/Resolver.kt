@@ -13,6 +13,68 @@ class Resolver(
         }
     }
 
+    override fun visit(assignmentExpression: AssignmentExpression) {
+        resolve(assignmentExpression.value)
+        resolveLocal(assignmentExpression, assignmentExpression.name)
+    }
+
+    override fun visit(binaryExpression: BinaryExpression) {
+        resolve(binaryExpression.left)
+
+        resolve(binaryExpression.right)
+    }
+
+    override fun visit(callExpression: CallExpression) {
+        resolve(callExpression.callee)
+
+        for (argument in callExpression.arguments) {
+            resolve(argument)
+        }
+    }
+
+    override fun visit(getExpression: GetExpression) {
+        resolve(getExpression.target)
+    }
+
+    override fun visit(groupingExpression: GroupingExpression) {
+        resolve(groupingExpression.expression)
+    }
+
+    override fun visit(literalExpression: LiteralExpression) {}
+
+    override fun visit(prefixExpression: PrefixExpression) {
+        resolve(prefixExpression.right)
+    }
+
+    override fun visit(setExpression: SetExpression) {
+        resolve(setExpression.value)
+        resolve(setExpression.target)
+    }
+
+    override fun visit(shortingExpression: ShortingExpression) {
+        resolve(shortingExpression.left)
+        resolve(shortingExpression.right)
+    }
+
+    override fun visit(superExpression: SuperExpression) {
+        if (currentClassType == ClassType.None) {
+            error(superExpression.keyword, "Can't use 'super' outside of a class.")
+        } else if (currentClassType == ClassType.Class) {
+            error(superExpression.keyword, "Can't use 'super' in a class with no superclass.")
+        }
+
+        resolveLocal(superExpression, superExpression.keyword)
+    }
+
+    override fun visit(thisExpression: ThisExpression) {
+        if (currentClassType == ClassType.None) {
+            error(thisExpression.keyword, "Can't use 'this' outside of a class.")
+            return
+        }
+
+        resolveLocal(thisExpression, thisExpression.keyword)
+    }
+
     override fun visit(variableExpression: VariableExpression) {
         if (scopes.isNotEmpty() && scopes.peek()[variableExpression.name.lexeme] == false) {
             error(variableExpression.name, "Can't read local variable in its own initializer.")
@@ -21,70 +83,10 @@ class Resolver(
         resolveLocal(variableExpression, variableExpression.name)
     }
 
-    override fun visit(assignmentExpression: AssignmentExpression) {
-        resolve(assignmentExpression.value)
-        resolveLocal(assignmentExpression, assignmentExpression.name)
-    }
-
-    override fun visit(variableStatement: VariableStatement) {
-        declare(variableStatement.name)
-
-        if (variableStatement.initializer != null) {
-            resolve(variableStatement.initializer)
-        }
-
-        define(variableStatement.name)
-    }
-
     override fun visit(blockStatement: BlockStatement) {
         scoped {
             resolve(blockStatement.statements)
         }
-    }
-
-    override fun visit(functionStatement: FunctionStatement) {
-        declare(functionStatement.name)
-        define(functionStatement.name)
-
-        resolveFunction(functionStatement, FunctionType.Function)
-    }
-
-    override fun visit(expressionStatement: ExpressionStatement) {
-        resolve(expressionStatement.expression)
-    }
-
-    override fun visit(ifStatement: IfStatement) {
-        resolve(ifStatement.condition)
-
-        resolve(ifStatement.thenBranch)
-
-        if (ifStatement.elseBranch != null) {
-            resolve(ifStatement.elseBranch)
-        }
-    }
-
-    override fun visit(printStatement: PrintStatement) {
-        resolve(printStatement.expression)
-    }
-
-    override fun visit(returnStatement: ReturnStatement) {
-        if (currentFunctionType == FunctionType.None) {
-            error(returnStatement.keyword, "Can't return from top-level code.")
-        }
-
-        if (returnStatement.value != null) {
-            if (currentFunctionType == FunctionType.Initializer) {
-                error(returnStatement.keyword, "Can't return a value from an initializer.")
-            }
-
-            resolve(returnStatement.value)
-        }
-    }
-
-    override fun visit(whileStatement: WhileStatement) {
-        resolve(whileStatement.condition)
-
-        resolve(whileStatement.body)
     }
 
     override fun visit(classStatement: ClassStatement) {
@@ -126,61 +128,59 @@ class Resolver(
         currentClassType = enclosingClassType
     }
 
-    override fun visit(binaryExpression: BinaryExpression) {
-        resolve(binaryExpression.left)
-
-        resolve(binaryExpression.right)
+    override fun visit(expressionStatement: ExpressionStatement) {
+        resolve(expressionStatement.expression)
     }
 
-    override fun visit(callExpression: CallExpression) {
-        resolve(callExpression.callee)
+    override fun visit(functionStatement: FunctionStatement) {
+        declare(functionStatement.name)
+        define(functionStatement.name)
 
-        for (argument in callExpression.arguments) {
-            resolve(argument)
+        resolveFunction(functionStatement, FunctionType.Function)
+    }
+
+    override fun visit(ifStatement: IfStatement) {
+        resolve(ifStatement.condition)
+
+        resolve(ifStatement.thenBranch)
+
+        if (ifStatement.elseBranch != null) {
+            resolve(ifStatement.elseBranch)
         }
     }
 
-    override fun visit(groupingExpression: GroupingExpression) {
-        resolve(groupingExpression.expression)
+    override fun visit(printStatement: PrintStatement) {
+        resolve(printStatement.expression)
     }
 
-    override fun visit(literalExpression: LiteralExpression) {}
-
-    override fun visit(shortingExpression: ShortingExpression) {
-        resolve(shortingExpression.left)
-        resolve(shortingExpression.right)
-    }
-
-    override fun visit(prefixExpression: PrefixExpression) {
-        resolve(prefixExpression.right)
-    }
-
-    override fun visit(getExpression: GetExpression) {
-        resolve(getExpression.target)
-    }
-
-    override fun visit(setExpression: SetExpression) {
-        resolve(setExpression.value)
-        resolve(setExpression.target)
-    }
-
-    override fun visit(thisExpression: ThisExpression) {
-        if (currentClassType == ClassType.None) {
-            error(thisExpression.keyword, "Can't use 'this' outside of a class.")
-            return
+    override fun visit(returnStatement: ReturnStatement) {
+        if (currentFunctionType == FunctionType.None) {
+            error(returnStatement.keyword, "Can't return from top-level code.")
         }
 
-        resolveLocal(thisExpression, thisExpression.keyword)
+        if (returnStatement.value != null) {
+            if (currentFunctionType == FunctionType.Initializer) {
+                error(returnStatement.keyword, "Can't return a value from an initializer.")
+            }
+
+            resolve(returnStatement.value)
+        }
     }
 
-    override fun visit(superExpression: SuperExpression) {
-        if (currentClassType == ClassType.None) {
-            error(superExpression.keyword, "Can't use 'super' outside of a class.")
-        } else if (currentClassType == ClassType.Class) {
-            error(superExpression.keyword, "Can't use 'super' in a class with no superclass.")
+    override fun visit(variableStatement: VariableStatement) {
+        declare(variableStatement.name)
+
+        if (variableStatement.initializer != null) {
+            resolve(variableStatement.initializer)
         }
 
-        resolveLocal(superExpression, superExpression.keyword)
+        define(variableStatement.name)
+    }
+
+    override fun visit(whileStatement: WhileStatement) {
+        resolve(whileStatement.condition)
+
+        resolve(whileStatement.body)
     }
 
 

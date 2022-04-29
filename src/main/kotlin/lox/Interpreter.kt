@@ -39,19 +39,18 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         locals[expression] = depth
     }
 
-    override fun visit(literalExpression: LiteralExpression): Any? {
-        return literalExpression.value
-    }
+    override fun visit(assignmentExpression: AssignmentExpression): Any? {
+        val value = evaluate(assignmentExpression.value)
 
-    override fun visit(prefixExpression: PrefixExpression): Any? {
-        val right = evaluate(prefixExpression.right)
+        val distance = locals[assignmentExpression]
 
-        return when (prefixExpression.operator.type) {
-            Minus -> -(right as Double)
-            Bang -> !isTruthy(right)
-
-            else -> null
+        if (distance != null) {
+            environment.assignAt(distance, assignmentExpression.name, value)
+        } else {
+            globals.assign(assignmentExpression.name, value)
         }
+
+        return value
     }
 
     override fun visit(binaryExpression: BinaryExpression): Any? {
@@ -135,6 +134,25 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         throw RuntimeError(getExpression.name, "Only instances have properties.")
     }
 
+    override fun visit(groupingExpression: GroupingExpression): Any? {
+        return evaluate(groupingExpression.expression)
+    }
+
+    override fun visit(literalExpression: LiteralExpression): Any? {
+        return literalExpression.value
+    }
+
+    override fun visit(prefixExpression: PrefixExpression): Any? {
+        val right = evaluate(prefixExpression.right)
+
+        return when (prefixExpression.operator.type) {
+            Minus -> -(right as Double)
+            Bang -> !isTruthy(right)
+
+            else -> null
+        }
+    }
+
     override fun visit(setExpression: SetExpression): Any? {
         val target = evaluate(setExpression.target)
 
@@ -149,16 +167,16 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return value
     }
 
-    override fun visit(groupingExpression: GroupingExpression): Any? {
-        return evaluate(groupingExpression.expression)
-    }
+    override fun visit(shortingExpression: ShortingExpression): Any? {
+        val left = evaluate(shortingExpression.left)
 
-    override fun visit(variableExpression: VariableExpression): Any? {
-        return lookUpVariable(variableExpression.name, variableExpression)
-    }
+        if (shortingExpression.operator.type == Or) {
+            if (isTruthy(left)) {return left}
+        } else {
+            if (!isTruthy(left)) {return left}
+        }
 
-    override fun visit(thisExpression: ThisExpression): Any? {
-        return lookUpVariable(thisExpression.keyword, thisExpression)
+        return evaluate(shortingExpression.right)
     }
 
     override fun visit(superExpression: SuperExpression): Function {
@@ -176,86 +194,16 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         return method.bind(target)
     }
 
-    override fun visit(assignmentExpression: AssignmentExpression): Any? {
-        val value = evaluate(assignmentExpression.value)
-
-        val distance = locals[assignmentExpression]
-
-        if (distance != null) {
-            environment.assignAt(distance, assignmentExpression.name, value)
-        } else {
-            globals.assign(assignmentExpression.name, value)
-        }
-
-        return value
+    override fun visit(thisExpression: ThisExpression): Any? {
+        return lookUpVariable(thisExpression.keyword, thisExpression)
     }
 
-    override fun visit(shortingExpression: ShortingExpression): Any? {
-        val left = evaluate(shortingExpression.left)
-
-        if (shortingExpression.operator.type == Or) {
-            if (isTruthy(left)) {return left}
-        } else {
-            if (!isTruthy(left)) {return left}
-        }
-
-        return evaluate(shortingExpression.right)
-    }
-
-    override fun visit(expressionStatement: ExpressionStatement) {
-        evaluate(expressionStatement.expression)
-    }
-
-    override fun visit(printStatement: PrintStatement) {
-        val expression = evaluate(printStatement.expression)
-
-        println(stringify(expression))
-    }
-
-    override fun visit(variableStatement: VariableStatement) {
-        val value = if (variableStatement.initializer != null) {
-            evaluate(variableStatement.initializer)
-        } else {
-            null
-        }
-
-        environment.define(variableStatement.name.lexeme, value)
+    override fun visit(variableExpression: VariableExpression): Any? {
+        return lookUpVariable(variableExpression.name, variableExpression)
     }
 
     override fun visit(blockStatement: BlockStatement) {
         executeBlock(blockStatement.statements, Environment(environment))
-    }
-
-    override fun visit(ifStatement: IfStatement) {
-        val condition = evaluate(ifStatement.condition)
-
-        if (isTruthy(condition)) {
-            execute(ifStatement.thenBranch)
-        } else if (ifStatement.elseBranch != null) {
-            execute(ifStatement.elseBranch)
-        }
-    }
-
-    override fun visit(whileStatement: WhileStatement) {
-        while (isTruthy(evaluate(whileStatement.condition))) {
-            execute(whileStatement.body)
-        }
-    }
-
-    override fun visit(functionStatement: FunctionStatement) {
-        val function = Function(functionStatement, environment, isInitializer = false)
-
-        environment.define(functionStatement.name.lexeme, function)
-    }
-
-    override fun visit(returnStatement: ReturnStatement) {
-        val value = if (returnStatement.value != null) {
-            evaluate(returnStatement.value)
-        } else {
-            null
-        }
-
-        throw Return(value)
     }
 
     override fun visit(classStatement: ClassStatement) {
@@ -287,6 +235,58 @@ class Interpreter : Expression.Visitor<Any?>, Statement.Visitor<Unit> {
         }
 
         environment.assign(classStatement.name, loxClass)
+    }
+
+    override fun visit(expressionStatement: ExpressionStatement) {
+        evaluate(expressionStatement.expression)
+    }
+
+    override fun visit(functionStatement: FunctionStatement) {
+        val function = Function(functionStatement, environment, isInitializer = false)
+
+        environment.define(functionStatement.name.lexeme, function)
+    }
+
+    override fun visit(ifStatement: IfStatement) {
+        val condition = evaluate(ifStatement.condition)
+
+        if (isTruthy(condition)) {
+            execute(ifStatement.thenBranch)
+        } else if (ifStatement.elseBranch != null) {
+            execute(ifStatement.elseBranch)
+        }
+    }
+
+    override fun visit(printStatement: PrintStatement) {
+        val expression = evaluate(printStatement.expression)
+
+        println(stringify(expression))
+    }
+
+    override fun visit(returnStatement: ReturnStatement) {
+        val value = if (returnStatement.value != null) {
+            evaluate(returnStatement.value)
+        } else {
+            null
+        }
+
+        throw Return(value)
+    }
+
+    override fun visit(variableStatement: VariableStatement) {
+        val value = if (variableStatement.initializer != null) {
+            evaluate(variableStatement.initializer)
+        } else {
+            null
+        }
+
+        environment.define(variableStatement.name.lexeme, value)
+    }
+
+    override fun visit(whileStatement: WhileStatement) {
+        while (isTruthy(evaluate(whileStatement.condition))) {
+            execute(whileStatement.body)
+        }
     }
 
 
